@@ -1,7 +1,9 @@
+import * as Linking from "expo-linking";
 import {
     Pedometer
 } from "expo-sensors";
 import { useEffect, useRef } from "react";
+import { Alert, Platform } from "react-native";
 import { create } from "zustand";
 import type { StepStore } from "./types/stepStore";
 
@@ -21,20 +23,62 @@ export default function Sensors() {
     const baseStepCountRef = useRef<number>(0);
     const { setSteps } = useStepStore();
 
+    const openSettings = () => {
+        if (Platform.OS === 'ios') {
+            Linking.openURL('app-settings:');
+        } else {
+            Linking.openSettings();
+        }
+    };
+
+    const showPermissionAlert = () => {
+        Alert.alert(
+            'Permission Required',
+            'Step tracking requires motion sensor permissions. Please enable it in your device settings.',
+            [
+                {
+                    text: 'Cancel',
+                    style: 'cancel',
+                },
+                {
+                    text: 'Open Settings',
+                    onPress: openSettings,
+                },
+            ],
+            { cancelable: false }
+        );
+    };
+
     const checkAndRequestPedometerPermission = async (): Promise<boolean> => {
         try {
-            // Request permission - this will show the dialog if permission hasn't been determined
-            // If already granted, it will return 'granted' without showing a dialog
-            // If denied, it will return 'denied' without showing a dialog
+            // First check current permission status
+            const { status: currentStatus } = await Pedometer.getPermissionsAsync();
+            console.log('Current permission status:', currentStatus);
+            
+            // If already granted, return true
+            if (currentStatus === 'granted') {
+                console.log('✅ Pedometer permission already granted');
+                return true;
+            }
+            
+            // If denied, show alert to open settings
+            if (currentStatus === 'denied') {
+                console.warn('❌ Pedometer permission denied. Showing alert to open settings.');
+                showPermissionAlert();
+                return false;
+            }
+            
+            // If undetermined, request permission
             console.log('Requesting pedometer permission...');
             const { status } = await Pedometer.requestPermissionsAsync();
-            console.log('Permission status:', status);
+            console.log('Permission request result:', status);
             
             if (status === 'granted') {
                 console.log('✅ Pedometer permission granted');
                 return true;
             } else if (status === 'denied') {
-                console.warn('❌ Pedometer permission denied. User needs to enable it in device settings.');
+                console.warn('❌ Pedometer permission denied. Showing alert to open settings.');
+                showPermissionAlert();
                 return false;
             } else {
                 console.warn('⚠️ Pedometer permission status:', status);
