@@ -51,27 +51,12 @@ export default function Sensors() {
 
     const checkAndRequestPedometerPermission = async (): Promise<boolean> => {
         try {
-            // First check current permission status
-            const { status: currentStatus } = await Pedometer.getPermissionsAsync();
-            console.log('Current permission status:', currentStatus);
-            
-            // If already granted, return true
-            if (currentStatus === 'granted') {
-                console.log('✅ Pedometer permission already granted');
-                return true;
-            }
-            
-            // If denied, show alert to open settings
-            if (currentStatus === 'denied') {
-                console.warn('❌ Pedometer permission denied. Showing alert to open settings.');
-                showPermissionAlert();
-                return false;
-            }
-            
-            // If undetermined, request permission
+            // Request permission - this will show the dialog if permission hasn't been determined
+            // If already granted, it will return 'granted' without showing a dialog
+            // If denied, it will return 'denied' without showing a dialog
             console.log('Requesting pedometer permission...');
             const { status } = await Pedometer.requestPermissionsAsync();
-            console.log('Permission request result:', status);
+            console.log('Permission status:', status);
             
             if (status === 'granted') {
                 console.log('✅ Pedometer permission granted');
