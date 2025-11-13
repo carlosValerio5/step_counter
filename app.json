@@ -4,7 +4,7 @@
     "slug": "step_tracker",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/step_counter_logo.png",
     "scheme": "steptracker",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
@@ -36,7 +36,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/images/splash-icon.png",
+          "image": "./assets/images/step_counter_logo.png",
           "imageWidth": 200,
           "resizeMode": "contain",
           "backgroundColor": "#ffffff",
@@ -50,7 +50,8 @@
         {
           "motionPermission": "Allow $(PRODUCT_NAME) to access your motion sensors."
         }
-      ]
+      ],
+      "expo-sqlite"
     ],
     "experiments": {
       "typedRoutes": true,
