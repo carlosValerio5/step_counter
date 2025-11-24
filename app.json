@@ -51,7 +51,13 @@
           "motionPermission": "Allow $(PRODUCT_NAME) to access your motion sensors."
         }
       ],
-      "expo-sqlite"
+	  [
+		"expo-sqlite",
+		{
+			"enableFTS": true,
+			"useSQLCipher": true
+		}
+	  ]
     ],
     "experiments": {
       "typedRoutes": true,
