@@ -39,7 +39,7 @@ interface dbProfile {
 
 const getPersistentState = async (db: SQLiteDatabase): Promise<dbProfile | null> => {
   try {
-    const stmt = "SELECT weight_kilos, height_meters FROM user_profile ORDER BY created_at DESC";
+    const stmt = "SELECT weight_kilos, height_meters FROM user_profile ORDER BY updated_at DESC";
     const profile = await db.getFirstAsync<dbProfile>(stmt);
     console.log(profile);
     return profile || null;
@@ -119,6 +119,42 @@ export const saveProfileToDatabase = async (
     await db.runAsync(
       `INSERT INTO user_profile (height_meters, height_feet, height_inches, weight_kilos, weight_pounds, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [height, feet, inches, weight, pounds, now, now]
+    );
+  } catch (error) {
+    console.error('Error saving profile to database:', error);
+    throw error;
+  }
+};
+
+export const updateProfileToDatabase = async (
+  db: SQLiteDatabase,
+  height: number,
+  weight: number
+) => {
+  try {
+    const now = new Date().toISOString();
+    
+    // Convert height to feet and inches
+    const totalInches = height * 39.3701; // meters to inches
+    const feet = Math.floor(totalInches / 12);
+    const inches = totalInches % 12;
+    
+    // Convert weight to pounds
+    const pounds = weight * 2.20462;
+    
+    // Insert new record (update pattern for SQLite)
+    await db.runAsync(
+      `INSERT INTO user_profile (height_meters, height_feet, height_inches, weight_kilos, weight_pounds, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET 
+         height_meters = excluded.height_meters,
+         height_feet = excluded.height_feet,
+         height_inches = excluded.height_inches,
+         weight_kilos = excluded.weight_kilos,
+         weight_pounds = excluded.weight_pounds,
+         updated_at = excluded.updated_at
+       WHERE id = (SELECT id FROM user_profile ORDER BY created_at DESC LIMIT 1)`,
       [height, feet, inches, weight, pounds, now, now]
     );
   } catch (error) {
@@ -227,7 +263,8 @@ export default function Profile() {
       return;
     }
 
-    await saveProfileToDatabase(db, heightM, weightKg);
+    await updateProfileToDatabase(db, heightM, weightKg);
+    //await saveProfileToDatabase(db, heightM, weightKg);
     setError("");
     setHeight(heightM);
     setWeight(weightKg);
