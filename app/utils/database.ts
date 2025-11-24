@@ -1,3 +1,4 @@
+import type { SQLiteDatabase } from 'expo-sqlite';
 import * as SQLite from 'expo-sqlite';
 
 const DATABASE_NAME = 'step_tracker.db';
@@ -69,9 +70,8 @@ export async function runMigration(sql: string): Promise<void> {
  * Initializes the database by running migrations
  * This should be called once when the app starts
  */
-export async function initializeDatabase(): Promise<void> {
+export async function initializeDatabase(db: SQLiteDatabase): Promise<void> {
   try {
-    const database = await getDatabase();
     
     // Read migration file
     const migrationSQL = `
@@ -172,6 +172,9 @@ export async function executeTransaction(
 }
 
 export async function migrateDbIfNeeded(db: SQLite.SQLiteDatabase) {
+    if (!db)
+        throw Error("Failed to initialize database");
+
     console.log("Initializing migration");
     const DATABASE_VERSION = 1;
     let { user_version: currentDbVersion } = await db.getFirstAsync<{ user_version: number }>(
@@ -184,7 +187,7 @@ export async function migrateDbIfNeeded(db: SQLite.SQLiteDatabase) {
     }
     if (currentDbVersion === 0) {
         console.log("Initializing Data base");
-        await initializeDatabase();
+        await initializeDatabase(db);
         currentDbVersion = 1;
     }
     // if (currentDbVersion === 1) {

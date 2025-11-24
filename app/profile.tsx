@@ -1,15 +1,16 @@
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import { SQLiteDatabase, useSQLiteContext } from "expo-sqlite";
+import React, { ReactNode, useEffect, useState } from "react";
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { create } from "zustand";
@@ -21,19 +22,115 @@ type ProfileStore = {
   setWeight: (weight: number) => void;
 };
 
-export const useProfileStore = create<ProfileStore>((set) => ({
+interface ProfileProps {
+  height: number;
+  weight: number;
+}
+
+const DEFAULT_PROPS: ProfileProps = {
   height: 0,
-  weight: 0,
-  setHeight: (height) => set({ height }),
-  setWeight: (weight) => set({ weight }),
-}));
+  weight: 0
+};
+
+interface dbProfile {
+  weight_kilos: number;
+  height_meters: number;
+}
+
+const getPersistentState = async (db: SQLiteDatabase): Promise<dbProfile | null> => {
+  try {
+    const stmt = "SELECT weight_kilos, height_meters FROM user_profile ORDER BY created_at DESC";
+    const profile = await db.getFirstAsync<dbProfile>(stmt);
+    console.log(profile);
+    return profile || null;
+  } catch (error) {
+    console.error('Error fetching profile from db:', error);
+    return null;
+  }
+};
+
+// Create store with initial props
+const createProfileStore = (initProps: Partial<ProfileProps> = DEFAULT_PROPS) => {
+  return create<ProfileStore>()((set) => ({
+    ...DEFAULT_PROPS,
+    ...initProps,
+    setHeight: (height) => set({ height }),
+    setWeight: (weight) => set({ weight })
+  }));
+};
+
+export let useProfileStore: ReturnType<typeof createProfileStore> | null = null;
+export const initProfileStore = async (db: SQLiteDatabase) => {
+  const dbProfile = await getPersistentState(db);
+
+  const initProps: Partial<ProfileProps> = {
+    height: dbProfile?.height_meters ?? DEFAULT_PROPS.height,
+    weight: dbProfile?.weight_kilos ?? DEFAULT_PROPS.weight,
+
+  };
+
+  useProfileStore = createProfileStore(initProps);
+  return useProfileStore;
+}
+// Provider component that wraps your app
+export function ProfileStoreProvider({ children }: { children: ReactNode }) {
+  const db = useSQLiteContext();
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    initProfileStore(db).then(() => setIsReady(true));
+  }, [db]);
+
+  if (!isReady) {
+    return null; // or a loading screen
+  }
+
+  return children;
+}
+
+// Hook to use the store in child components
+export const useProfile = () => {
+  if (!useProfileStore) {
+    throw new Error('ProfileStoreProvider must be set up before using useProfile hook');
+  }
+  return useProfileStore();
+};
 
 type HeightUnit = "metric" | "imperial";
 type WeightUnit = "kg" | "lbs";
 
+export const saveProfileToDatabase = async (
+  db: SQLiteDatabase,
+  height: number,
+  weight: number
+) => {
+  try {
+    const now = new Date().toISOString();
+    
+    // Convert height to feet and inches
+    const totalInches = height * 39.3701; // meters to inches
+    const feet = Math.floor(totalInches / 12);
+    const inches = totalInches % 12;
+    
+    // Convert weight to pounds
+    const pounds = weight * 2.20462;
+    
+    // Insert new record (update pattern for SQLite)
+    await db.runAsync(
+      `INSERT INTO user_profile (height_meters, height_feet, height_inches, weight_kilos, weight_pounds, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [height, feet, inches, weight, pounds, now, now]
+    );
+  } catch (error) {
+    console.error('Error saving profile to database:', error);
+    throw error;
+  }
+};
+
 export default function Profile() {
+  const db = useSQLiteContext();
   const router = useRouter();
-  const { height: storedHeight, weight: storedWeight, setHeight, setWeight } = useProfileStore();
+  const { height: storedHeight, weight: storedWeight, setHeight, setWeight } = useProfile();
 
   // Height state
   const [heightUnit, setHeightUnit] = useState<HeightUnit>("metric");
@@ -115,7 +212,7 @@ export default function Profile() {
     }
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const heightM = convertHeightToMeters();
     const weightKg = convertWeightToKg();
 
@@ -130,6 +227,7 @@ export default function Profile() {
       return;
     }
 
+    await saveProfileToDatabase(db, heightM, weightKg);
     setError("");
     setHeight(heightM);
     setWeight(weightKg);

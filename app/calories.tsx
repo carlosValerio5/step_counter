@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { create } from "zustand";
-import { useProfileStore } from "./profile";
+import { useProfile } from './profile';
 import { useStepStore } from "./sensors";
 import type { CaloriesStore } from "./types/caloriesStore";
 
@@ -12,7 +12,7 @@ export const useCaloriesStore = create<CaloriesStore>((set)=>({
 
 export default function Calories() {
   const { setCalories } = useCaloriesStore();
-  const { height: storedHeight, weight: storedWeight, setHeight, setWeight } = useProfileStore();
+  const { height: storedHeight, weight: storedWeight, setHeight, setWeight } = useProfile();
   const { steps }  = useStepStore();
 
   // Metric for level of intensity, using moderate intensity for now.
