@@ -9,12 +9,15 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
+      "bundleIdentifier": "com.valerio.stepstracker",
       "supportsTablet": true,
       "infoPlist": {
-        "NSMotionUsageDescription": "This app needs access to motion sensors to track your daily steps and help you achieve your fitness goals."
+        "NSMotionUsageDescription": "This app needs access to motion sensors to track your daily steps and help you achieve your fitness goals.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
+      "package": "com.valerio.stepstracker",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/images/android-icon-foreground.png",
@@ -51,17 +54,23 @@
           "motionPermission": "Allow $(PRODUCT_NAME) to access your motion sensors."
         }
       ],
-	  [
-		"expo-sqlite",
-		{
-			"enableFTS": true,
-			"useSQLCipher": true
-		}
-	  ]
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "732c7d1b-f593-4fd0-9c38-1024ddb1483a"
+      }
     }
   }
 }
